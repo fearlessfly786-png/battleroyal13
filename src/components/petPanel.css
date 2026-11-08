@@ -1,0 +1,1542 @@
+/* ==========================================================================
+   PET PANEL — full-screen kennel UI.
+   Ported from the uploaded "pixel-perfect-design-implementation" pet screen
+   with two intentional changes requested by the player:
+     1. NO blue voxel-world background — the lobby dashboard's blurred
+        backdrop stays exactly as it is.
+     2. NO new player name bar / currency bar — the dashboard header stays
+        exactly as it is (rendered by the component itself).
+   Everything below styles only the pet body: stage, rail, details panel,
+   equip button, actions, rename dialog. All sizes derive from --u
+   (design was authored on a 1672px-wide canvas).
+   ========================================================================== */
+
+.pet-screen {
+  --u: calc(100vw / 1672);
+
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  font-family: var(--font-barlow-cond), "Arial Narrow", sans-serif;
+  font-weight: 600;
+  color: #f8f7ff;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+
+.pet-screen :focus-visible {
+  outline: 3px solid #fff878;
+  outline-offset: 5px;
+}
+
+.pet-screen button {
+  color: inherit;
+  cursor: pointer;
+  border: 0;
+  padding: 0;
+  background: none;
+  font: inherit;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+.pet-screen button:disabled {
+  cursor: default;
+}
+.pet-screen img {
+  display: block;
+  max-width: 100%;
+  user-select: none;
+}
+.pet-screen svg {
+  display: block;
+  flex-shrink: 0;
+}
+
+.icon-button {
+  display: grid;
+  place-items: center;
+  transition:
+    color 0.18s,
+    filter 0.18s,
+    background 0.18s,
+    transform 0.18s;
+}
+.icon-button:hover {
+  color: #ffe837;
+  filter: brightness(1.2);
+}
+.icon-button:active {
+  transform: scale(0.93);
+}
+
+/* --------------------------------- body --------------------------------- */
+/* Full-bleed like the reference design: the kept dashboard header simply
+   overlays the top (the reference used the same overlay geometry). */
+.pet-body {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+}
+
+/* ------------------------------- pet stage ------------------------------ */
+.pet-stage {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.pet-nameplate {
+  position: absolute;
+  top: 13.6%;
+  left: 25.5%;
+  width: 23.2%;
+  height: calc(57 * var(--u));
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 calc(12 * var(--u));
+  pointer-events: auto;
+  clip-path: polygon(
+    2% 0,
+    97% 0,
+    97% 5%,
+    100% 5%,
+    100% 88%,
+    98% 88%,
+    98% 100%,
+    0 100%,
+    0 23%
+  );
+  background: linear-gradient(
+    145deg,
+    rgba(5, 25, 48, 0.93),
+    rgba(5, 28, 56, 0.95) 70%,
+    rgba(6, 36, 65, 0.91)
+  );
+  border: calc(2 * var(--u)) solid #0b1024;
+  box-shadow: inset 0 0 0 calc(2 * var(--u)) #45658c;
+}
+.pet-nameplate::before {
+  content: "";
+  position: absolute;
+  inset: calc(-2 * var(--u));
+  background: url("/pets/frame-wear.svg") center/100% 100% no-repeat;
+  z-index: 4;
+  pointer-events: none;
+}
+.name-paw {
+  width: calc(45 * var(--u));
+  height: calc(45 * var(--u));
+  color: #ffe000;
+}
+.pet-nameplate h1 {
+  margin: 0;
+  flex: 1;
+  min-width: 0;
+  padding: 0 calc(8 * var(--u));
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-align: center;
+  font-size: calc(44 * var(--u));
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: calc(0.3 * var(--u));
+  text-shadow: 0 calc(2 * var(--u)) #061021;
+  white-space: nowrap;
+}
+.pet-nameplate h1.long-name {
+  font-size: calc(33 * var(--u));
+}
+.rename-button {
+  width: calc(39 * var(--u));
+  height: calc(43 * var(--u));
+  color: #cfe0f4;
+}
+.rename-button svg {
+  width: calc(36 * var(--u));
+  height: calc(36 * var(--u));
+}
+
+.pet-display {
+  position: absolute;
+  left: 40.8%;
+  bottom: 16.7%;
+  height: 46.5%;
+  width: 29%;
+  transform: translateX(-50%);
+  pointer-events: none;
+  z-index: 4;
+}
+.pet-model {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  animation: pf-pet-in 0.24s ease-out;
+}
+.pet-character {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  pointer-events: auto;
+  transform-origin: 50% 92%;
+  filter: drop-shadow(
+    calc(5 * var(--u)) calc(10 * var(--u)) calc(6 * var(--u)) #09102438
+  );
+}
+.pet-character img {
+  width: auto;
+  height: 100%;
+  max-width: 100%;
+  object-fit: contain;
+  object-position: center bottom;
+  transform-origin: 50% 100%;
+  animation: pet-breathe 4.8s ease-in-out infinite;
+  transition: filter 0.2s;
+}
+.pet-character:hover img {
+  filter: brightness(1.045);
+}
+.pet-character.is-active img {
+  animation: none;
+}
+.pet-model-panda .pet-character img {
+  height: 94%;
+}
+.pet-model-draco .pet-character img {
+  height: 93%;
+  max-width: 110%;
+}
+.pet-model-ottero .pet-character img {
+  height: 94%;
+}
+.pet-model-neon .pet-character img {
+  height: 89%;
+}
+.pet-shadow {
+  position: absolute;
+  left: 40.8%;
+  bottom: 16.6%;
+  width: 20%;
+  height: 3.5%;
+  border-radius: 50%;
+  background: #21150580;
+  filter: blur(calc(12 * var(--u)));
+  transform: translateX(-50%);
+  z-index: 1;
+}
+.pedestal-aura {
+  position: absolute;
+  left: 41%;
+  bottom: 16%;
+  height: 21%;
+  width: 36%;
+  transform: translateX(-50%);
+  background: radial-gradient(
+    ellipse at 50% 100%,
+    #ffcc0033 0,
+    transparent 65%
+  );
+  mix-blend-mode: screen;
+  animation: aura-pulse 5s ease-in-out infinite;
+  z-index: 1;
+}
+.gold-particles {
+  position: absolute;
+  left: 24%;
+  width: 34%;
+  bottom: 16%;
+  height: 20%;
+  overflow: visible;
+  pointer-events: none;
+  z-index: 5;
+}
+.gold-particles i {
+  position: absolute;
+  bottom: 2%;
+  left: var(--left);
+  width: calc(7 * var(--u));
+  height: calc(7 * var(--u));
+  background: #fff16b;
+  box-shadow: 0 0 calc(12 * var(--u)) calc(3 * var(--u)) #ffcc00bd;
+  animation: gold-float 4.2s ease-out var(--delay) infinite;
+  opacity: 0;
+}
+.gold-particles i:nth-child(3n) {
+  width: calc(11 * var(--u));
+  height: calc(11 * var(--u));
+}
+.gold-particles.celebrating i {
+  animation-duration: 1.3s;
+}
+
+/* -------------------------------- pet rail ------------------------------ */
+/* A floating column of independent SQUARE pet boxes. The rail itself has no
+   background/border any more — every pet owns its own square tile (like the
+   reference art) instead of sharing one continuous vertical bar. Each box is
+   sized to min(rail width, height / boxes) so it stays a perfect square on
+   any aspect ratio (container-query units). */
+.pet-rail {
+  --rail-gap: calc(10 * var(--u));
+  --rail-chev: calc(48 * var(--u)); /* room reserved for the next-pet chevron */
+  position: absolute;
+  top: 20.5%; /* lightly more down toward the bottom */
+  left: 1.45%;
+  bottom: auto; /* hugs its content — bottom edge touches the bottom pet square */
+  width: 7%;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  padding: calc(6 * var(--u));
+  gap: var(--rail-gap);
+  /* vertical rectangle framing the whole pet bar — sharp edges */
+  border: calc(2 * var(--u)) solid #a8a7b873;
+  border-radius: 0;
+  background: linear-gradient(180deg, #0b1a2cd9, #040a12e8);
+  box-shadow:
+    0 0 calc(18 * var(--u)) #0000008c,
+    inset 0 0 calc(14 * var(--u)) #00000080;
+}
+.pet-option {
+  position: relative;
+  flex: none;
+  width: 100%; /* full-size squares (rectangle grows with them) */
+  min-height: 0; /* let aspect-ratio win over the image's intrinsic height */
+  height: auto;
+  aspect-ratio: 1; /* perfect square */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  border: calc(2 * var(--u)) solid #a8a7b873;
+  background: linear-gradient(135deg, #102033a3, #071018db);
+  isolation: isolate;
+  transition:
+    border-color 0.2s,
+    filter 0.2s,
+    background 0.2s,
+    width 0.25s ease,
+    height 0.25s ease;
+}
+.pet-option img {
+  width: 98%;
+  height: 98%;
+  object-fit: contain;
+  position: relative;
+  z-index: 1;
+  /* square tile drawn behind each pet image — sharp edges */
+  border-radius: 0;
+  background:
+    linear-gradient(165deg, #ffffff1f, #ffffff08 45%, #00000040),
+    #0a1624;
+  box-shadow: inset 0 0 0 calc(1.5 * var(--u)) #a8a7b85c;
+  transition:
+    transform 0.25s,
+    filter 0.25s;
+  filter: drop-shadow(0 calc(5 * var(--u)) calc(4 * var(--u)) #000a);
+}
+.pet-option:hover img {
+  transform: scale(1.065);
+  filter: brightness(1.13)
+    drop-shadow(0 calc(5 * var(--u)) calc(4 * var(--u)) #000a);
+}
+.pet-option:hover {
+  border-color: #fff1a6;
+}
+.pet-option.selected {
+  z-index: 2;
+  border-color: #fffbae;
+  outline: calc(3 * var(--u)) solid #ffdd00;
+  outline-offset: calc(1 * var(--u));
+  box-shadow:
+    0 0 calc(12 * var(--u)) calc(4 * var(--u)) #fff200ce,
+    inset 0 0 calc(12 * var(--u)) #ffcf00;
+  background: linear-gradient(140deg, #4c400a, #6e4d09 45%, #c59f12);
+}
+.pet-option-glow {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at 50% 100%, #fff31c99, transparent 65%);
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+.pet-option.selected .pet-option-glow {
+  opacity: 1;
+}
+.pet-option.selected img {
+  transform: scale(1.02);
+}
+.selection-corner {
+  position: absolute;
+  top: calc(-4 * var(--u));
+  right: calc(-4 * var(--u));
+  width: calc(26 * var(--u));
+  height: calc(20 * var(--u));
+  border-top: calc(3 * var(--u)) solid #fff;
+  border-right: calc(3 * var(--u)) solid #fff;
+  opacity: 0;
+  z-index: 3;
+}
+.pet-option.selected .selection-corner {
+  opacity: 1;
+}
+.selected-arrow {
+  position: absolute;
+  width: calc(36 * var(--u));
+  height: calc(45 * var(--u));
+  right: calc(-41 * var(--u));
+  top: 50%;
+  transform: translateY(-50%);
+  color: #ffdc00;
+  filter: drop-shadow(calc(2 * var(--u)) calc(3 * var(--u)) 0 #8e6e05);
+}
+.equipped-mark {
+  position: absolute;
+  right: calc(4 * var(--u));
+  bottom: calc(4 * var(--u));
+  z-index: 4;
+  background: #ffe000;
+  color: #0d1723;
+  padding: calc(3 * var(--u));
+  clip-path: polygon(20% 0, 100% 0, 100% 80%, 80% 100%, 0 100%, 0 20%);
+}
+.equipped-mark svg {
+  width: calc(17 * var(--u));
+  height: calc(17 * var(--u));
+}
+.next-pet {
+  position: absolute;
+  left: 50%;
+  bottom: calc(-48 * var(--u)); /* sits fully outside, below the rectangle */
+  transform: translateX(-50%);
+  width: calc(56 * var(--u));
+  height: calc(42 * var(--u));
+  display: grid;
+  place-items: center;
+  color: #ffdb00;
+  transition:
+    background 0.2s,
+    filter 0.2s;
+}
+.next-pet svg {
+  width: calc(47 * var(--u));
+  height: calc(39 * var(--u));
+  filter: drop-shadow(calc(2 * var(--u)) calc(3 * var(--u)) 0 #875c00);
+}
+.next-pet:hover {
+  background: #fff00019;
+  filter: brightness(1.2);
+}
+
+/* ------------------------------ details zone ---------------------------- */
+.details-zone {
+  position: absolute;
+  right: 1.1%;
+  top: 19.8%; /* pet card + level header moved down */
+  bottom: 10.6%; /* equip button sits lower */
+  width: 26.75%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: calc(23 * var(--u));
+  z-index: 8;
+}
+.pet-panel {
+  position: relative;
+  width: 100%;
+  flex: 1;
+  min-height: 0;
+  padding: calc(3 * var(--u));
+  background: linear-gradient(
+    140deg,
+    #eff6ff 0 5%,
+    #6177b4 6%,
+    #442252 12%,
+    #0d1427 37%,
+    #454475 58%,
+    #09152c 81%,
+    #943dff 95%,
+    #e0a6ff
+  );
+  clip-path: polygon(6% 0, 100% 0, 100% 95%, 94% 100%, 0 100%, 0 5%);
+  filter: drop-shadow(0 calc(3 * var(--u)) 0 #010816);
+}
+.pet-panel::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: url("/pets/panel-wear.svg") center/100% 100% no-repeat;
+  opacity: 0.85;
+}
+.panel-interior {
+  position: relative;
+  height: 100%;
+  overflow: hidden;
+  background: linear-gradient(
+    145deg,
+    rgba(6, 24, 43, 0.96),
+    rgba(5, 16, 30, 0.92) 60%,
+    rgba(8, 22, 43, 0.89)
+  );
+  clip-path: polygon(5.5% 0, 100% 0, 100% 95%, 94% 100%, 0 100%, 0 4.5%);
+}
+.panel-interior::before {
+  content: "";
+  position: absolute;
+  pointer-events: none;
+  inset: 0;
+  z-index: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 160 160' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.075' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Cpath fill='%23798ca6' opacity='.16' filter='url(%23n)' d='M0 0h160v160H0z'/%3E%3C/svg%3E");
+  opacity: 0.27;
+  mix-blend-mode: screen;
+}
+.panel-interior > * {
+  position: relative;
+  z-index: 1;
+}
+.panel-corner {
+  position: absolute;
+  width: calc(37 * var(--u));
+  height: calc(35 * var(--u));
+  pointer-events: none;
+}
+.panel-corner.top {
+  top: calc(2 * var(--u));
+  left: calc(2 * var(--u));
+  border-top: calc(2 * var(--u)) solid #fbf5ff;
+  border-left: calc(2 * var(--u)) solid #fbf5ff;
+}
+.panel-corner.bottom {
+  bottom: calc(3 * var(--u));
+  right: calc(3 * var(--u));
+  border-bottom: calc(2 * var(--u)) solid #e381ff;
+  border-right: calc(2 * var(--u)) solid #e381ff;
+}
+
+.level-header {
+  height: calc(105 * var(--u));
+  padding: calc(15 * var(--u)) calc(29 * var(--u)) calc(19 * var(--u));
+}
+.level-info {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  line-height: 1;
+}
+.level-info strong {
+  font-size: calc(45 * var(--u));
+  font-weight: 700;
+  letter-spacing: calc(0.8 * var(--u));
+}
+.level-info > span {
+  font-size: calc(35 * var(--u));
+  font-weight: 600;
+}
+.level-progress {
+  height: calc(14 * var(--u));
+  background: #050c17;
+  border: calc(2 * var(--u)) solid #646987;
+  box-shadow: inset 0 0 calc(2 * var(--u)) #05070e;
+  margin-top: calc(10 * var(--u));
+  clip-path: polygon(
+    1% 0,
+    99% 0,
+    99% 12%,
+    100% 12%,
+    100% 90%,
+    99% 90%,
+    99% 100%,
+    0 100%,
+    0 15%,
+    1% 15%
+  );
+}
+.level-progress > span {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, #ffd200, #ffee3a);
+}
+
+.pet-tabs {
+  height: calc(65 * var(--u));
+  width: 100%;
+  display: flex;
+  border-top: calc(2 * var(--u)) solid #646181;
+  border-bottom: calc(2 * var(--u)) solid #646181;
+  background: #171d30;
+}
+.pet-tab {
+  position: relative;
+  width: 50%;
+  font-size: calc(36 * var(--u));
+  font-weight: 700;
+  line-height: 1;
+  background: linear-gradient(135deg, #17253a88, #11152288);
+  transition:
+    background 0.2s,
+    color 0.2s;
+}
+.pet-tab + .pet-tab {
+  border-left: calc(2 * var(--u)) solid #827697;
+}
+.pet-tab:hover:not(.active) {
+  background: #29334a;
+  color: #fff17b;
+}
+.pet-tab.active {
+  color: #080c0b;
+  background: linear-gradient(120deg, #ffdf00, #fff324 48%, #ffdc00);
+  box-shadow:
+    inset 0 0 0 calc(4 * var(--u)) #ffdf00,
+    0 calc(3 * var(--u)) 0 #c68d00;
+  z-index: 1;
+}
+.pet-tab.active::before,
+.yellow-button::before {
+  content: "";
+  position: absolute;
+  inset: calc(6 * var(--u));
+  pointer-events: none;
+  border-top: calc(4 * var(--u)) solid #fff97b9c;
+  border-left: calc(6 * var(--u)) solid #fff34f63;
+  border-right: calc(4 * var(--u)) solid #ffd32c75;
+  border-bottom: calc(5 * var(--u)) solid #f6a90069;
+  clip-path: polygon(5% 0, 100% 0, 100% 80%, 95% 100%, 0 100%, 0 20%);
+}
+.pet-tab.active::after,
+.yellow-button::after {
+  content: "";
+  position: absolute;
+  pointer-events: none;
+  inset: 0;
+  background: linear-gradient(
+    130deg,
+    transparent 0 11%,
+    #ffb50024 11% 18%,
+    transparent 18% 58%,
+    #fff97038 58% 63%,
+    transparent 63% 81%,
+    #ffad001c 81% 87%,
+    transparent 87%
+  );
+  clip-path: polygon(0 6%, 100% 0, 97% 89%, 0 100%);
+}
+
+.skill-content {
+  padding: calc(36 * var(--u)) calc(26 * var(--u)) 0;
+}
+.ability-row {
+  display: flex;
+  align-items: center;
+  gap: calc(16 * var(--u));
+  min-height: calc(130 * var(--u));
+}
+.skill-emblem {
+  width: calc(125 * var(--u));
+  height: calc(132 * var(--u));
+  flex-shrink: 0;
+  filter: drop-shadow(0 0 calc(8 * var(--u)) #8119ec73);
+}
+.skill-emblem svg {
+  width: 100%;
+  height: 100%;
+}
+.emblem-outline {
+  stroke: var(--skill-color);
+}
+.ability-copy {
+  padding-bottom: calc(6 * var(--u));
+  min-width: 0;
+}
+.ability-copy h2 {
+  font-size: calc(35 * var(--u));
+  line-height: 1.04;
+  color: #ffdf08;
+  font-weight: 700;
+  margin: 0 0 calc(12 * var(--u));
+  letter-spacing: calc(-0.25 * var(--u));
+}
+.ability-copy p {
+  font-size: calc(27 * var(--u));
+  line-height: 1.06;
+  margin: 0;
+  font-weight: 600;
+  text-shadow: 0 calc(2 * var(--u)) #030b15;
+}
+.ability-copy p strong {
+  color: #ffe100;
+  font-weight: 700;
+}
+.pet-story {
+  position: relative;
+  margin: calc(54 * var(--u)) 0 0;
+  border-top: calc(2 * var(--u)) solid #76719b;
+  padding: calc(16 * var(--u)) calc(24 * var(--u)) 0;
+}
+.pet-story::before,
+.pet-story::after {
+  position: absolute;
+  content: "";
+  top: calc(-5 * var(--u));
+  width: calc(10 * var(--u));
+  height: calc(8 * var(--u));
+  border-left: calc(3 * var(--u)) solid #77749c;
+  border-right: calc(2 * var(--u)) solid #77749c;
+  transform: skewX(-15deg);
+}
+.pet-story::before {
+  left: calc(5 * var(--u));
+}
+.pet-story::after {
+  right: calc(5 * var(--u));
+}
+.pet-story p {
+  font-size: calc(29 * var(--u));
+  font-weight: 500;
+  font-style: italic;
+  line-height: 1.03;
+  margin: 0;
+  letter-spacing: calc(0.1 * var(--u));
+  color: #e7e5f5;
+}
+
+.yellow-button {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: calc(12 * var(--u));
+  color: #171500;
+  background: linear-gradient(
+    135deg,
+    #fff21b 2%,
+    #ffe000 40%,
+    #ffdd00 75%,
+    #ffe92b
+  );
+  font-weight: 700;
+  border: calc(5 * var(--u)) solid #061223;
+  box-shadow:
+    inset 0 0 0 calc(3 * var(--u)) #fff878,
+    0 calc(4 * var(--u)) calc(3 * var(--u)) #05091c7d;
+  clip-path: polygon(4% 0, 100% 0, 100% 86%, 96% 100%, 0 100%, 0 15%);
+  transition:
+    filter 0.2s,
+    transform 0.2s;
+}
+.yellow-button:hover:not(:disabled) {
+  filter: brightness(1.12);
+  transform: translateY(-3px);
+}
+.yellow-button:active:not(:disabled) {
+  transform: translateY(0) scale(0.98);
+}
+.yellow-button span,
+.yellow-button > svg {
+  position: relative;
+  z-index: 1;
+}
+.equip-button {
+  width: 77%;
+  height: calc(102 * var(--u));
+  flex-shrink: 0;
+  font-family: var(--font-anton), var(--font-barlow-cond), sans-serif;
+  font-size: calc(59 * var(--u));
+  line-height: 1;
+  letter-spacing: calc(0.5 * var(--u));
+  padding-top: calc(7 * var(--u));
+}
+.equip-button > svg {
+  width: calc(38 * var(--u));
+  height: calc(38 * var(--u));
+  margin-top: calc(-8 * var(--u));
+}
+.equip-button.is-equipped {
+  background: linear-gradient(125deg, #ffee70, #dcbf2f);
+  font-size: calc(49 * var(--u));
+}
+
+.actions-content {
+  padding: calc(32 * var(--u)) calc(28 * var(--u));
+}
+.actions-content h2 {
+  color: #ffe100;
+  font-size: calc(33 * var(--u));
+  margin: 0;
+  line-height: 1.1;
+}
+.actions-content > p {
+  font-size: calc(24 * var(--u));
+  font-weight: 500;
+  color: #d2d5e3;
+  margin: calc(9 * var(--u)) 0 calc(27 * var(--u));
+  line-height: 1.2;
+}
+.action-buttons {
+  display: flex;
+  gap: calc(9 * var(--u));
+}
+.action-buttons button {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  flex-direction: column;
+  padding: calc(17 * var(--u)) calc(3 * var(--u));
+  gap: calc(11 * var(--u));
+  border: calc(1 * var(--u)) solid #5e557e;
+  background: #2e224955;
+  transition:
+    color 0.2s,
+    border-color 0.2s,
+    background 0.2s;
+  font-size: calc(20 * var(--u));
+}
+.action-buttons svg {
+  width: calc(31 * var(--u));
+  height: calc(31 * var(--u));
+  color: #d17cff;
+}
+.action-buttons button:hover,
+.action-buttons button.playing {
+  border-color: #ffe100;
+  color: #ffe100;
+  background: #fff10012;
+}
+.actions-content .action-hint {
+  display: flex;
+  align-items: center;
+  gap: calc(8 * var(--u));
+  font-size: calc(21 * var(--u));
+  margin-top: calc(27 * var(--u));
+  color: #acabc5;
+}
+.action-hint svg {
+  width: calc(19 * var(--u));
+  height: calc(19 * var(--u));
+}
+
+.hide-pet {
+  position: absolute;
+  left: 11.7%;
+  bottom: 3.05%;
+  display: flex;
+  align-items: center;
+  gap: calc(19 * var(--u));
+  padding: calc(5 * var(--u)) calc(19 * var(--u)) calc(7 * var(--u))
+    calc(5 * var(--u));
+  font-size: calc(28 * var(--u));
+  font-weight: 600;
+  line-height: 1.2;
+  background: linear-gradient(90deg, #050d1bd9, #050d1bd9 89%, #050d1b85);
+  cursor: pointer;
+  z-index: 6;
+  transition: background 0.2s;
+}
+.hide-pet:hover {
+  background: #071526ed;
+}
+.hide-pet input {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: calc(45 * var(--u));
+  height: 100%;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+  z-index: 1;
+}
+.checkbox-visual {
+  display: grid;
+  place-items: center;
+  width: calc(36 * var(--u));
+  height: calc(38 * var(--u));
+  border: calc(3 * var(--u)) solid #ffde00;
+  background: #070f18d9;
+  clip-path: polygon(8% 0, 100% 0, 100% 91%, 91% 100%, 0 100%, 0 8%);
+  color: #ffe000;
+}
+.checkbox-visual svg {
+  width: 95%;
+  height: 95%;
+}
+.hide-pet input:focus-visible + .checkbox-visual {
+  box-shadow: 0 0 0 3px #fff;
+}
+.hide-pet:has(input:focus-visible) {
+  outline: 2px solid #fff878;
+  outline-offset: 3px;
+}
+
+/* ----------------------------- rename dialog ---------------------------- */
+.pf-modal-backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: 60;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: #020b1bc2;
+  backdrop-filter: blur(8px);
+  animation: pf-fade-in 0.2s ease-out;
+}
+.game-dialog {
+  width: min(480px, 100%);
+  max-height: calc(100% - 40px);
+  overflow: auto;
+  border: 1px solid #8873b3;
+  border-top: 3px solid #b28cff;
+  color: #f5f6ff;
+  background: #08182bef;
+  box-shadow: 0 25px 100px #010612aa;
+  font-size: 21px;
+  animation: pf-dialog-in 0.22s ease-out;
+}
+.dialog-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 19px 23px 17px;
+  border-bottom: 1px solid #68718d50;
+  background: linear-gradient(115deg, #14253d, #1d2036);
+}
+.dialog-header h2 {
+  font-size: 28px;
+  line-height: 1.1;
+  font-weight: 700;
+  letter-spacing: 0.6px;
+  margin: 0;
+}
+.dialog-close {
+  width: 30px;
+  height: 30px;
+  color: #c7cbe0;
+  flex-shrink: 0;
+}
+.dialog-close svg {
+  width: 27px;
+  height: 27px;
+}
+/* Panel close button (top-right corner): solid red with the project's
+   signature notch — top-left and bottom-right corners cut (same 8px
+   geometry as .clip-notch-sm). Declared here — not as Tailwind
+   utilities — because the unlayered `.pet-screen button` reset
+   overrides all utility layers. */
+.pet-screen .panel-close {
+  color: #ffffff;
+  border: 1px solid rgb(255 163 163 / 0.7);
+  background: var(--color-red-600, #e40014);
+  clip-path: polygon(
+    8px 0,
+    100% 0,
+    100% calc(100% - 8px),
+    calc(100% - 8px) 100%,
+    0 100%,
+    0 8px
+  );
+}
+.pet-screen .panel-close:hover {
+  background: var(--color-red-500, #ff2b2b);
+}
+.dialog-body {
+  padding: 24px;
+}
+.dialog-body p {
+  font-weight: 400;
+  line-height: 1.35;
+  margin: 0 0 20px;
+  color: #c4ccdf;
+}
+.rename-form > label {
+  display: block;
+  font-size: 17px;
+  letter-spacing: 1.1px;
+  color: #ffe000;
+  margin-bottom: 8px;
+}
+.name-input-wrap {
+  display: flex;
+  align-items: center;
+  background: #030d1d;
+  border: 1px solid #667693;
+}
+.name-input-wrap:focus-within {
+  border-color: #ffe000;
+  box-shadow: 0 0 0 1px #ffe000;
+}
+.name-input-wrap input {
+  padding: 14px 15px;
+  min-width: 0;
+  width: 100%;
+  border: none;
+  background: none;
+  font: inherit;
+  font-size: 25px;
+  color: #fff;
+  outline: 0;
+  -webkit-appearance: none;
+  appearance: none;
+}
+.name-input-wrap > span {
+  padding: 0 14px;
+  color: #9da9c4;
+  font-size: 17px;
+  white-space: nowrap;
+}
+.dialog-body .form-error {
+  color: #ff8d92;
+  font-size: 17px;
+  margin: 8px 0 0;
+}
+.modal-primary {
+  width: 100%;
+  min-height: 56px;
+  font-size: 25px;
+  letter-spacing: 0.5px;
+  margin-top: 24px;
+  clip-path: polygon(
+    9px 0,
+    100% 0,
+    100% calc(100% - 9px),
+    calc(100% - 9px) 100%,
+    0 100%,
+    0 9px
+  );
+}
+
+/* ------------------------------- keyframes ------------------------------ */
+@keyframes pet-breathe {
+  0%,
+  100% {
+    transform: scaleY(1) rotate(0);
+  }
+  50% {
+    transform: scaleY(1.009) rotate(0.2deg);
+  }
+}
+@keyframes aura-pulse {
+  0%,
+  100% {
+    opacity: 0.65;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+@keyframes gold-float {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, 0, 0) scale(0.3) rotate(0);
+  }
+  15% {
+    opacity: 0.8;
+  }
+  75% {
+    opacity: 0.65;
+  }
+  100% {
+    opacity: 0;
+    transform: translate3d(calc((var(--particle) - 5) * 4px), -115px, 0)
+      scale(0.6) rotate(75deg);
+  }
+}
+@keyframes pf-pet-in {
+  from {
+    opacity: 0;
+    transform: translateX(calc(-16 * var(--u))) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+}
+@keyframes pf-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes pf-dialog-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+/* pet action animations — -a/-b variants so repeating the same action
+   restarts the animation (React toggles between the two names). */
+@keyframes pf-jump-a {
+  0% { transform: translateY(0) rotate(0) scaleY(1); }
+  20% { transform: translateY(-65px) rotate(-3deg) scaleY(1.02); }
+  40% { transform: translateY(0) rotate(2deg) scaleY(0.95); }
+  60% { transform: translateY(-18px) rotate(0) scaleY(1.02); }
+  80%, 100% { transform: translateY(0) rotate(0) scaleY(1); }
+}
+@keyframes pf-jump-b {
+  0% { transform: translateY(0) rotate(0) scaleY(1); }
+  20% { transform: translateY(-65px) rotate(-3deg) scaleY(1.02); }
+  40% { transform: translateY(0) rotate(2deg) scaleY(0.95); }
+  60% { transform: translateY(-18px) rotate(0) scaleY(1.02); }
+  80%, 100% { transform: translateY(0) rotate(0) scaleY(1); }
+}
+@keyframes pf-greet-a {
+  0% { transform: translateY(0) rotate(0); }
+  16% { transform: translateY(-5px) rotate(-8deg); }
+  33% { transform: translateY(0) rotate(7deg); }
+  50% { transform: translateY(-5px) rotate(-5deg); }
+  66% { transform: translateY(0) rotate(4deg); }
+  83%, 100% { transform: translateY(0) rotate(0); }
+}
+@keyframes pf-greet-b {
+  0% { transform: translateY(0) rotate(0); }
+  16% { transform: translateY(-5px) rotate(-8deg); }
+  33% { transform: translateY(0) rotate(7deg); }
+  50% { transform: translateY(-5px) rotate(-5deg); }
+  66% { transform: translateY(0) rotate(4deg); }
+  83%, 100% { transform: translateY(0) rotate(0); }
+}
+@keyframes pf-celebrate-a {
+  0% { transform: translateY(0) rotate(0) scale(1); }
+  20% { transform: translateY(-25px) rotate(-6deg) scale(1.03); }
+  40% { transform: translateY(0) rotate(5deg) scale(1); }
+  60% { transform: translateY(-38px) rotate(-5deg) scale(1.03); }
+  80%, 100% { transform: translateY(0) rotate(0) scale(1); }
+}
+@keyframes pf-celebrate-b {
+  0% { transform: translateY(0) rotate(0) scale(1); }
+  20% { transform: translateY(-25px) rotate(-6deg) scale(1.03); }
+  40% { transform: translateY(0) rotate(5deg) scale(1); }
+  60% { transform: translateY(-38px) rotate(-5deg) scale(1.03); }
+  80%, 100% { transform: translateY(0) rotate(0) scale(1); }
+}
+
+/* ------------------------- portrait / small screens ---------------------- */
+@media (max-width: 1024px) and (orientation: portrait) {
+  .pet-screen {
+    --u: 1px;
+  }
+  /* flow layout below the kept dashboard header */
+  .pet-body {
+    inset: auto 0 0 0;
+    top: 82px;
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding-bottom: 24px;
+    scrollbar-width: thin;
+  }
+  .pet-stage {
+    position: relative;
+    inset: auto;
+    height: 385px;
+    width: 100%;
+    flex-shrink: 0;
+    pointer-events: none;
+  }
+  .pet-nameplate {
+    left: 50%;
+    top: 24px;
+    width: 252px;
+    height: 42px;
+    transform: translateX(-50%);
+    padding: 0 10px;
+    border-width: 1px;
+    box-shadow: inset 0 0 0 1px #45658c;
+  }
+  .name-paw {
+    width: 31px;
+    height: 31px;
+  }
+  .pet-nameplate h1 {
+    font-size: 32px;
+    letter-spacing: 0.3px;
+  }
+  .pet-nameplate h1.long-name {
+    font-size: 25px;
+  }
+  .rename-button {
+    width: 30px;
+    height: 34px;
+  }
+  .rename-button svg {
+    width: 27px;
+    height: 27px;
+  }
+  .pet-display {
+    left: 50%;
+    bottom: 13px;
+    width: 70%;
+    height: 290px;
+  }
+  .pet-shadow {
+    left: 50%;
+    bottom: 9px;
+    width: 180px;
+    height: 19px;
+    filter: blur(9px);
+  }
+  .pedestal-aura {
+    left: 50%;
+    bottom: 3px;
+    width: 310px;
+    height: 130px;
+  }
+  .gold-particles {
+    left: 10%;
+    width: 80%;
+    bottom: 6px;
+    height: 100px;
+  }
+  .gold-particles i {
+    width: 4px;
+    height: 4px;
+    box-shadow: 0 0 8px 2px #ffcc00bd;
+  }
+  .gold-particles i:nth-child(3n) {
+    width: 7px;
+    height: 7px;
+  }
+  .pet-rail {
+    position: relative;
+    left: auto;
+    top: auto;
+    bottom: auto;
+    margin: 8px 17px 0;
+    width: calc(100% - 34px);
+    height: 91px;
+    display: flex;
+    flex-direction: row;
+    gap: 5px;
+    padding: 4px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: none;
+    background: transparent;
+    box-shadow: none;
+    border: 0;
+    border-radius: 0;
+    flex-shrink: 0;
+    align-items: center;
+  }
+  .pet-rail::-webkit-scrollbar {
+    display: none;
+  }
+  .pet-option {
+    min-width: 0;
+    flex: 0 0 auto;
+    margin: 0;
+    border-width: 1px;
+    width: 79px;
+    height: 79px;
+    overflow: visible;
+  }
+  .pet-option img {
+    height: 92%;
+    width: 92%;
+    filter: drop-shadow(0 3px 3px #0007);
+  }
+  .pet-option.selected {
+    flex: 0 0 auto;
+    margin: 0;
+    outline: 2px solid #ffe000;
+    outline-offset: -1px;
+    box-shadow:
+      0 0 8px 1px #ffe00099,
+      inset 0 0 10px #ffcf00;
+  }
+  .selection-corner {
+    width: 14px;
+    height: 12px;
+    top: 0;
+    right: 0;
+    border-width: 2px;
+  }
+  .selected-arrow {
+    display: none;
+  }
+  .next-pet {
+    display: none;
+  }
+  .equipped-mark {
+    right: 2px;
+    bottom: 2px;
+    padding: 1px;
+  }
+  .equipped-mark svg {
+    width: 12px;
+    height: 12px;
+  }
+  .details-zone {
+    position: relative;
+    inset: auto;
+    width: calc(100% - 34px);
+    margin: 21px 17px 0;
+    display: flex;
+    gap: 16px;
+  }
+  .pet-panel {
+    padding: 2px;
+    width: 100%;
+    flex: auto;
+    min-height: 324px;
+    clip-path: polygon(
+      20px 0,
+      100% 0,
+      100% calc(100% - 20px),
+      calc(100% - 20px) 100%,
+      0 100%,
+      0 20px
+    );
+  }
+  .panel-interior {
+    min-height: 320px;
+    clip-path: polygon(
+      19px 0,
+      100% 0,
+      100% calc(100% - 19px),
+      calc(100% - 19px) 100%,
+      0 100%,
+      0 19px
+    );
+    background: linear-gradient(135deg, #0c2035f2, #0a1427f2);
+  }
+  .panel-corner {
+    display: none;
+  }
+  .level-header {
+    height: 73px;
+    padding: 12px 20px 11px;
+  }
+  .level-info strong {
+    font-size: 31px;
+  }
+  .level-info > span {
+    font-size: 25px;
+  }
+  .level-progress {
+    height: 9px;
+    margin-top: 7px;
+    border-width: 1px;
+  }
+  .pet-tabs {
+    height: 46px;
+    border-width: 1px;
+  }
+  .pet-tab {
+    font-size: 26px;
+  }
+  .pet-tab + .pet-tab {
+    border-left-width: 1px;
+  }
+  .pet-tab.active {
+    box-shadow:
+      inset 0 0 0 2px #ffdf00,
+      0 2px 0 #c68d00;
+  }
+  .pet-tab.active::before {
+    inset: 4px;
+    border-width: 3px;
+  }
+  .skill-content {
+    padding: 21px 19px 24px;
+  }
+  .ability-row {
+    gap: 14px;
+    min-height: 87px;
+  }
+  .skill-emblem {
+    width: 88px;
+    height: 92px;
+    filter: drop-shadow(0 0 6px #8119ec73);
+  }
+  .ability-copy h2 {
+    font-size: 29px;
+    margin-bottom: 7px;
+    letter-spacing: -0.2px;
+  }
+  .ability-copy p {
+    font-size: 22px;
+    line-height: 1.1;
+    text-shadow: 0 1px #030b15;
+  }
+  .pet-story {
+    margin: 21px 0 0;
+    padding: 13px 12px 0;
+    border-top-width: 1px;
+  }
+  .pet-story p {
+    font-size: 23px;
+    line-height: 1.1;
+    max-width: 260px;
+  }
+  .pet-story::before,
+  .pet-story::after {
+    top: -4px;
+    width: 8px;
+    height: 6px;
+    border-left-width: 2px;
+    border-right-width: 2px;
+  }
+  .equip-button {
+    width: 100%;
+    height: 64px;
+    min-height: 64px;
+    font-size: 42px;
+    border-width: 3px;
+    padding-top: 5px;
+    letter-spacing: 0.5px;
+    clip-path: polygon(
+      10px 0,
+      100% 0,
+      100% calc(100% - 10px),
+      calc(100% - 10px) 100%,
+      0 100%,
+      0 10px
+    );
+  }
+  .equip-button::before {
+    inset: 4px;
+    border-width: 4px;
+  }
+  .equip-button.is-equipped {
+    font-size: 37px;
+  }
+  .equip-button > svg {
+    width: 28px;
+    height: 28px;
+    margin-top: -5px;
+  }
+  .actions-content {
+    padding: 23px 20px;
+  }
+  .actions-content h2 {
+    font-size: 28px;
+  }
+  .actions-content > p {
+    font-size: 20px;
+    margin: 7px 0 21px;
+  }
+  .action-buttons button {
+    padding: 13px 4px;
+    gap: 8px;
+    font-size: 17px;
+    border-width: 1px;
+  }
+  .action-buttons svg {
+    width: 27px;
+    height: 27px;
+  }
+  .actions-content .action-hint {
+    font-size: 18px;
+    gap: 7px;
+    margin-top: 19px;
+  }
+  .action-hint svg {
+    width: 16px;
+    height: 16px;
+  }
+  .hide-pet {
+    position: relative;
+    inset: auto;
+    align-self: center;
+    font-size: 21px;
+    gap: 12px;
+    padding: 10px 15px;
+    margin: 14px 17px 0;
+    background: #06112277;
+    min-height: 44px;
+  }
+  .checkbox-visual {
+    height: 25px;
+    width: 25px;
+    border-width: 2px;
+  }
+  .hide-pet input {
+    width: 40px;
+  }
+}
+
+@media (max-width: 370px) and (orientation: portrait) {
+  .pet-stage {
+    height: 355px;
+  }
+  .pet-display {
+    height: 265px;
+  }
+  .pet-nameplate {
+    top: 20px;
+    width: 230px;
+  }
+  .pet-rail {
+    margin-left: 12px;
+    margin-right: 12px;
+    width: calc(100% - 24px);
+    height: 83px;
+    gap: 4px;
+  }
+  .pet-option {
+    width: 71px;
+    height: 71px;
+  }
+  .details-zone {
+    margin-left: 12px;
+    margin-right: 12px;
+    width: calc(100% - 24px);
+  }
+}
+
+/* short landscape screens */
+@media (max-height: 540px) and (orientation: landscape) {
+  .pet-nameplate {
+    top: 12.4%;
+  }
+  .details-zone {
+    top: 19.8%;
+    bottom: 8.5%;
+    gap: calc(14 * var(--u));
+  }
+  .equip-button {
+    height: calc(85 * var(--u));
+  }
+  .pet-rail {
+    top: 17.8%;
+    bottom: auto;
+  }
+  .hide-pet {
+    bottom: 2.5%;
+  }
+  .level-header {
+    height: calc(92 * var(--u));
+    padding-top: calc(10 * var(--u));
+    padding-bottom: calc(12 * var(--u));
+  }
+  .pet-tabs {
+    height: calc(56 * var(--u));
+  }
+  .pet-display {
+    height: 49%;
+    bottom: 15.5%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pet-screen *,
+  .pet-screen *::before,
+  .pet-screen *::after {
+    animation: none !important;
+    transition-duration: 0.01ms !important;
+  }
+}

@@ -1,0 +1,691 @@
+/* ==========================================================================
+   STORE PANEL — full-screen Free Fire-inspired store.
+   Opens over the whole dashboard when the STORE entry in the left rail is
+   clicked. Layout: left category rail + scrollable main column with the
+   featured hero deal (live countdown) and the product grid.
+
+   Conventions follow petPanel.css:
+     - The component renders the dashboard's own top chrome (player card +
+       currency bar) — this file styles ONLY the store body.
+     - `.store-screen button` reset mirrors `.pet-screen button`; because it
+       is unlayered CSS it beats Tailwind utility layers, so every themed
+       button style is declared here with a `.store-screen` prefix.
+   ========================================================================== */
+
+.store-screen {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  font-family: var(--font-barlow-cond), "Arial Narrow", sans-serif;
+  font-weight: 600;
+  color: #f8f7ff;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+
+.store-screen :focus-visible {
+  outline: 3px solid #fff878;
+  outline-offset: 5px;
+}
+
+.store-screen button {
+  color: inherit;
+  cursor: pointer;
+  border: 0;
+  padding: 0;
+  background: none;
+  font: inherit;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+.store-screen button:disabled {
+  cursor: default;
+}
+.store-screen img {
+  display: block;
+  max-width: 100%;
+  user-select: none;
+}
+.store-screen svg {
+  display: block;
+  flex-shrink: 0;
+}
+
+/* ------------------------- top-up + (header chrome) ---------------------- */
+/* Styled here (not with Tailwind utilities) for the same cascade reason
+   as everything else — the unlayered button reset wins over utilities. */
+.store-screen .store-topup {
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 50px;
+  margin-left: -8px;
+  clip-path: polygon(12px 0, 100% 0, calc(100% - 12px) 100%, 0 100%);
+  background: #131e33;
+  color: #fff;
+  transition:
+    background 0.15s,
+    color 0.15s,
+    transform 0.15s;
+}
+.store-screen .store-topup:hover {
+  background: var(--color-gold, #ffc61a);
+  color: #000;
+}
+.store-screen .store-topup:active {
+  transform: scale(0.95);
+}
+
+/* --------------------------- close (top-right) --------------------------- */
+/* Solid red with the project's signature notch — same look as the pet
+   panel's close button (top-left + bottom-right corners cut). */
+.store-screen .store-close {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  color: #ffffff;
+  border: 1px solid rgb(255 163 163 / 0.7);
+  background: var(--color-red-600, #e40014);
+  clip-path: polygon(
+    8px 0,
+    100% 0,
+    100% calc(100% - 8px),
+    calc(100% - 8px) 100%,
+    0 100%,
+    0 8px
+  );
+  transition:
+    background 0.15s,
+    transform 0.15s;
+}
+.store-screen .store-close:hover {
+  background: var(--color-red-500, #ff2b2b);
+  transform: rotate(90deg);
+}
+.store-screen .store-close:active {
+  transform: scale(0.95);
+}
+
+/* ------------------------------- body grid ------------------------------- */
+.store-body {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  display: flex;
+  gap: 12px;
+  padding: 80px 16px 16px;
+}
+
+/* ----------------------------- category rail ----------------------------- */
+.store-tabs {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 7px;
+  width: 212px;
+  flex-shrink: 0;
+}
+.store-screen .store-tab {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  height: 46px;
+  padding: 0 14px 0 15px;
+  clip-path: polygon(0 0, calc(100% - 15px) 0, 100% 50%, calc(100% - 15px) 100%, 0 100%);
+  background: rgb(6 12 23 / 0.82);
+  color: #e8e6f5;
+  text-align: left;
+  transition:
+    background 0.2s,
+    color 0.2s,
+    transform 0.2s;
+}
+.store-screen .store-tab:hover {
+  background: rgb(13 24 48 / 0.92);
+  transform: translateX(3px);
+}
+.store-screen .store-tab.is-active {
+  background: linear-gradient(to right, #ffd83d, var(--color-gold, #ffc61a));
+  color: #1a1300;
+  transform: translateX(4px);
+}
+.store-tab-icon {
+  width: 21px;
+  height: 21px;
+}
+.store-tab span {
+  flex: 1;
+  font-size: 16.5px;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  white-space: nowrap;
+}
+.store-tab-chev {
+  width: 15px;
+  height: 15px;
+  opacity: 0.55;
+}
+.store-screen .store-tab.is-active .store-tab-chev {
+  opacity: 0.9;
+}
+
+/* ------------------------------ main column ------------------------------ */
+/* NOTE: `scrollbar-width: thin` is deliberately NOT set here — in Chrome
+   121+ any non-initial value of the standard scrollbar properties disables
+   ::-webkit-scrollbar styling and falls back to the UA's WHITE scrollbar.
+   The custom black scrollbar below handles Chromium/Safari; a Firefox
+   fallback (scrollbar-color) lives in the @supports block underneath. */
+.store-main {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: 14px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scroll-behavior: smooth;
+  overscroll-behavior: contain;
+  padding-right: 2px;
+  padding-bottom: 4px;
+}
+
+/* main column scrollbar — BLACK theme, pill-shaped and smooth (requested).
+   Specificity (0,2,0) beats the global `.nice-scroll::-webkit-scrollbar`
+   rules (0,1,0) regardless of stylesheet order. */
+.store-screen .store-main::-webkit-scrollbar {
+  width: 10px;
+}
+.store-screen .store-main::-webkit-scrollbar-track {
+  background: rgb(255 255 255 / 0.05);
+  border-radius: 999px;
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.06);
+}
+.store-screen .store-main::-webkit-scrollbar-thumb {
+  background: linear-gradient(
+    to bottom,
+    rgb(16 18 24 / 0.96),
+    rgb(0 0 0 / 0.92)
+  );
+  border-radius: 999px;
+  box-shadow:
+    inset 0 0 0 1px rgb(255 255 255 / 0.14),
+    0 2px 8px rgb(0 0 0 / 0.55);
+  transition: background 0.2s;
+}
+.store-screen .store-main::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(
+    to bottom,
+    rgb(34 38 48 / 0.98),
+    rgb(12 12 16 / 0.94)
+  );
+}
+.store-screen .store-main::-webkit-scrollbar-thumb:active {
+  background: linear-gradient(
+    to bottom,
+    rgb(48 53 66 / 1),
+    rgb(20 20 26 / 0.96)
+  );
+  box-shadow:
+    inset 0 0 0 1px rgb(255 255 255 / 0.22),
+    0 2px 8px rgb(0 0 0 / 0.55);
+}
+
+/* Firefox fallback — same black theme via the standard properties */
+@supports not selector(::-webkit-scrollbar) {
+  .store-main {
+    scrollbar-width: thin;
+    scrollbar-color: rgb(0 0 0 / 0.88) rgb(255 255 255 / 0.06);
+  }
+}
+
+/* ----------------------------- featured hero ----------------------------- */
+.store-hero {
+  position: relative;
+  height: clamp(250px, 36vh, 340px);
+  flex-shrink: 0;
+  overflow: hidden;
+  clip-path: polygon(
+    14px 0,
+    100% 0,
+    100% calc(100% - 14px),
+    calc(100% - 14px) 100%,
+    0 100%,
+    0 14px
+  );
+  box-shadow: 0 0 0 1px rgb(255 198 26 / 0.35), 0 18px 44px rgb(0 0 0 / 0.5);
+}
+.store-hero-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 78% 30%;
+  transition: transform 6s ease;
+}
+.store-hero:hover .store-hero-img {
+  transform: scale(1.06);
+}
+.store-hero-shade {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(to right, rgb(4 7 13 / 0.92) 6%, rgb(4 7 13 / 0.55) 42%, rgb(4 7 13 / 0.05) 72%),
+    linear-gradient(to top, rgb(4 7 13 / 0.85), transparent 45%);
+}
+.store-hero-off {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  padding: 5px 11px;
+  background: linear-gradient(160deg, #ff7a3d, #ff4632);
+  clip-path: polygon(7px 0, 100% 0, calc(100% - 7px) 100%, 0 100%);
+  color: #fff;
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  box-shadow: 0 8px 22px rgb(255 70 50 / 0.45);
+}
+.store-hero-info {
+  position: absolute;
+  left: 22px;
+  right: 22px;
+  bottom: 18px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 9px;
+  max-width: 460px;
+}
+.store-hero-flag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px 4px;
+  background: var(--color-gold, #ffc61a);
+  color: #241a00;
+  clip-path: polygon(6px 0, 100% 0, calc(100% - 6px) 100%, 0 100%);
+  font-size: 12.5px;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+}
+.store-hero-flag svg {
+  width: 14px;
+  height: 14px;
+}
+.store-hero-title {
+  margin: 0;
+  font-family: var(--font-anton), "Arial Black", sans-serif;
+  font-size: 42px;
+  font-weight: 400;
+  font-style: italic;
+  letter-spacing: 0.04em;
+  line-height: 1;
+  color: var(--color-gold, #ffc61a);
+  text-shadow: 0 4px 18px rgb(0 0 0 / 0.6);
+}
+.store-hero-sub {
+  margin: 0;
+  font-size: 15.5px;
+  color: #cfd9ea;
+}
+.store-hero-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 4px;
+}
+.store-hero-timer {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 12px;
+  background: rgb(0 0 0 / 0.62);
+  box-shadow: 0 0 0 1px rgb(255 255 255 / 0.16);
+  color: #f8f7ff;
+  font-size: 14.5px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  font-variant-numeric: tabular-nums;
+}
+.store-hero-timer svg {
+  width: 15px;
+  height: 15px;
+  color: var(--color-gold, #ffc61a);
+}
+.store-hero-price {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: #fff;
+  font-size: 22px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+.store-hero-price s {
+  color: #8fa2ba;
+  font-size: 15px;
+  font-weight: 600;
+}
+.store-hero-price svg {
+  width: 19px;
+  height: 19px;
+}
+
+/* ------------------------------ buy buttons ------------------------------ */
+.store-screen .store-buy {
+  padding: 8px 18px;
+  clip-path: polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px);
+  background: linear-gradient(to bottom, #ffd83d, var(--color-gold-deep, #ff9d00));
+  color: #241a00;
+  font-size: 14.5px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  transition:
+    filter 0.15s,
+    transform 0.15s,
+    background 0.2s,
+    color 0.2s;
+}
+.store-screen .store-buy:hover {
+  filter: brightness(1.12);
+}
+.store-screen .store-buy:active {
+  transform: scale(0.95);
+}
+.store-screen .store-buy.is-owned {
+  background: rgb(52 211 153 / 0.16);
+  color: #6ee7b7;
+  box-shadow: inset 0 0 0 1px rgb(110 231 183 / 0.45);
+}
+
+/* ---------------------------- section heading ---------------------------- */
+.store-section-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+.store-section-head h2 {
+  margin: 0;
+  font-family: var(--font-anton), "Arial Black", sans-serif;
+  font-size: 23px;
+  font-weight: 400;
+  letter-spacing: 0.05em;
+  color: #fff;
+}
+.store-section-head h2::after {
+  content: " /";
+  color: var(--color-gold, #ffc61a);
+}
+.store-section-head span {
+  font-size: 13px;
+  letter-spacing: 0.08em;
+  color: var(--color-mist, #9fb3c8);
+}
+
+/* ------------------------------ product grid ----------------------------- */
+.store-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(198px, 1fr));
+  gap: 12px;
+}
+
+.store-card {
+  --rar: #ffd83d;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: rgb(10 17 31 / 0.88);
+  clip-path: polygon(
+    9px 0,
+    100% 0,
+    100% calc(100% - 9px),
+    calc(100% - 9px) 100%,
+    0 100%,
+    0 9px
+  );
+  box-shadow: 0 0 0 1px rgb(255 255 255 / 0.07);
+  transition: box-shadow 0.2s, transform 0.2s;
+}
+.store-card:hover {
+  box-shadow: 0 0 0 1px rgb(255 198 26 / 0.55), 0 12px 30px rgb(0 0 0 / 0.45);
+  transform: translateY(-2px);
+}
+.store-card[data-rarity="Legendary"] {
+  --rar: #ffd83d;
+}
+.store-card[data-rarity="Epic"] {
+  --rar: #b45cff;
+}
+.store-card[data-rarity="Rare"] {
+  --rar: #3fd9ff;
+}
+
+.store-card-art {
+  position: relative;
+  height: 128px;
+  overflow: hidden;
+}
+.store-card-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.45s ease;
+}
+.store-card:hover .store-card-img {
+  transform: scale(1.09);
+}
+.store-card-art::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to top, rgb(4 7 13 / 0.55), transparent 55%);
+}
+.store-card.is-owned .store-card-img {
+  filter: grayscale(0.75) brightness(0.6);
+}
+
+/* rarity chip — top-left */
+.store-card-rarity {
+  position: absolute;
+  top: 7px;
+  left: 7px;
+  z-index: 1;
+  padding: 2px 7px 3px;
+  background: color-mix(in srgb, var(--rar) 16%, transparent);
+  color: var(--rar);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--rar) 55%, transparent);
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+}
+
+/* tag flag — top-right (NEW / HOT / LIMITED) */
+.store-card-flag {
+  position: absolute;
+  top: 7px;
+  right: 7px;
+  z-index: 1;
+  padding: 2px 7px 3px;
+  clip-path: polygon(5px 0, 100% 0, calc(100% - 5px) 100%, 0 100%);
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  color: #241a00;
+}
+.store-card-flag.flag-new {
+  background: var(--color-gold, #ffc61a);
+}
+.store-card-flag.flag-hot {
+  background: #ff4632;
+  color: #fff;
+}
+.store-card-flag.flag-limited {
+  background: #b45cff;
+  color: #fff;
+}
+
+/* discount chip — bottom-left */
+.store-card-off {
+  position: absolute;
+  bottom: 7px;
+  left: 7px;
+  z-index: 1;
+  padding: 2px 7px 3px;
+  background: linear-gradient(160deg, #ff7a3d, #ff4632);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+}
+
+.store-card-info {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 9px;
+  padding: 10px 11px 12px;
+}
+.store-card-info h3 {
+  margin: 0;
+  overflow: hidden;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.store-card-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: auto;
+}
+.store-card-price {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 14.5px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+.store-card-price svg {
+  width: 16px;
+  height: 16px;
+}
+.store-card-price s {
+  color: #8fa2ba;
+  font-size: 11.5px;
+  font-weight: 600;
+}
+.store-screen .store-buy.buy-sm {
+  padding: 5px 12px;
+  font-size: 12.5px;
+}
+
+/* ------------------------------- responsive ------------------------------ */
+@media (max-width: 860px) {
+  .store-body {
+    flex-direction: column;
+    gap: 10px;
+    padding: 78px 10px 12px;
+  }
+  .store-tabs {
+    flex-direction: row;
+    width: 100%;
+    flex-shrink: 0;
+    gap: 6px;
+    overflow-x: auto;
+    padding-bottom: 5px;
+    scroll-behavior: smooth;
+    overscroll-behavior-x: contain;
+  }
+  /* black smooth scrollbar for the horizontal tab rail too */
+  .store-screen .store-tabs::-webkit-scrollbar {
+    height: 8px;
+  }
+  .store-screen .store-tabs::-webkit-scrollbar-track {
+    background: rgb(255 255 255 / 0.05);
+    border-radius: 999px;
+  }
+  .store-screen .store-tabs::-webkit-scrollbar-thumb {
+    background: linear-gradient(
+      to right,
+      rgb(16 18 24 / 0.96),
+      rgb(0 0 0 / 0.92)
+    );
+    border-radius: 999px;
+    box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.14);
+  }
+  @supports not selector(::-webkit-scrollbar) {
+    .store-tabs {
+      scrollbar-width: thin;
+      scrollbar-color: rgb(0 0 0 / 0.88) rgb(255 255 255 / 0.06);
+    }
+  }
+  .store-screen .store-tab {
+    height: 40px;
+    padding: 0 14px 0 12px;
+    flex-shrink: 0;
+  }
+  .store-tab-icon {
+    width: 17px;
+    height: 17px;
+  }
+  .store-tab span {
+    font-size: 14px;
+  }
+  .store-tab-chev {
+    display: none;
+  }
+  .store-hero {
+    height: 225px;
+  }
+  .store-hero-title {
+    font-size: 30px;
+  }
+  .store-hero-sub {
+    font-size: 13.5px;
+  }
+  .store-hero-info {
+    left: 14px;
+    right: 14px;
+    bottom: 12px;
+  }
+  .store-grid {
+    grid-template-columns: repeat(auto-fill, minmax(152px, 1fr));
+    gap: 10px;
+  }
+  .store-card-art {
+    height: 108px;
+  }
+}
+
+@media (max-width: 480px) {
+  .store-body {
+    padding-top: 76px;
+  }
+  .store-hero {
+    height: 205px;
+  }
+  .store-hero-off {
+    top: 10px;
+    right: 10px;
+    font-size: 13px;
+    padding: 4px 9px;
+  }
+  .store-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .store-section-head h2 {
+    font-size: 20px;
+  }
+  .store-hero-price {
+    font-size: 19px;
+  }
+}
